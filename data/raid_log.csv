@@ -1,0 +1,13 @@
+raid_id,project_id,type,description,mitigation,raised_date,status,owner
+PRJ-101-RAID-1,PRJ-101,Risk,Vendor delay for auth service,Mitigate by backup vendor,04-09-2026,Mitigated,Chen W.
+PRJ-101-RAID-2,PRJ-101,Issue,QA env down on Sep 10,Resolved - infra team fixed,27-08-2026,Closed,David P.
+PRJ-101-RAID-3,PRJ-101,Dependency,Mobile team waiting for API Gateway,API v1 due Oct 5,01-09-2026,Open,Amit K.
+PRJ-101-RAID-4,PRJ-101,Risk,Data migration may exceed downtime window,Plan dry run,31-08-2026,Mitigated,Chen W.
+PRJ-102-RAID-1,PRJ-102,Risk,Vendor delay for auth service,Mitigate by backup vendor,22-09-2026,Closed,Neha R.
+PRJ-102-RAID-2,PRJ-102,Issue,QA env down on Sep 10,Resolved - infra team fixed,18-07-2026,Open,Fatima S.
+PRJ-102-RAID-3,PRJ-102,Dependency,Mobile team waiting for API Gateway,API v1 due Oct 5,18-09-2026,Mitigated,Neha R.
+PRJ-102-RAID-4,PRJ-102,Risk,Data migration may exceed downtime window,Plan dry run,10-08-2026,Mitigated,Neha R.
+PRJ-103-RAID-1,PRJ-103,Risk,Vendor delay for auth service,Mitigate by backup vendor,29-07-2026,Closed,Emily Z.
+PRJ-103-RAID-2,PRJ-103,Issue,QA env down on Sep 10,Resolved - infra team fixed,11-08-2026,Open,Emily Z.
+PRJ-103-RAID-3,PRJ-103,Dependency,Mobile team waiting for API Gateway,API v1 due Oct 5,07-09-2026,Open,Emily Z.
+PRJ-103-RAID-4,PRJ-103,Risk,Data migration may exceed downtime window,Plan dry run,20-08-2026,Closed,Omar J.

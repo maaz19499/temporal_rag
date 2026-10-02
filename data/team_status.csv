@@ -1,0 +1,12 @@
+project_id,member,role,availability_next_week,current_focus,text,valid_from,valid_to,doc_type
+PRJ-101,Amit K.,QA,80% - Oncall,UI wireframes,Amit K. is working on App store submission. Availability next week: 100%.,01-10-2026,08-10-2026,team_status
+PRJ-101,Sarah L.,QA,50% - PTO on Mon,Performance tuning,Sarah L. is working on QA testing. Availability next week: 50% PTO.,01-10-2026,08-10-2026,team_status
+PRJ-101,Chen W.,DevOps,80% - Oncall,UI wireframes,Chen W. is working on QA testing. Availability next week: 100%.,01-10-2026,08-10-2026,team_status
+PRJ-101,David P.,QA,50% - PTO on Mon,Push notification service,David P. is working on UI wireframes. Availability next week: 50% PTO.,01-10-2026,08-10-2026,team_status
+PRJ-102,Neha R.,PM,100%,Go-live,Neha R. is working on Rollback drill. Availability next week: 80%.,01-10-2026,08-10-2026,team_status
+PRJ-102,John D.,DevOps,50% - PTO on Mon,Schema mapping,John D. is working on ETL pipeline. Availability next week: 80%.,01-10-2026,08-10-2026,team_status
+PRJ-102,Fatima S.,QA,80% - Oncall,Rollback drill,Fatima S. is working on Cutover plan. Availability next week: 80%.,01-10-2026,08-10-2026,team_status
+PRJ-103,Vikram S.,DevOps,100%,OAuth integration,Vikram S. is working on Logging infra. Availability next week: 80%.,01-10-2026,08-10-2026,team_status
+PRJ-103,Lisa M.,Backend,50% - PTO on Mon,Load testing,Lisa M. is working on Security audit. Availability next week: 50% PTO.,01-10-2026,08-10-2026,team_status
+PRJ-103,Omar J.,Frontend,100%,Security audit,Omar J. is working on Docs. Availability next week: 100%.,01-10-2026,08-10-2026,team_status
+PRJ-103,Emily Z.,Backend,50% - PTO on Mon,Docs,Emily Z. is working on Rate limiter design. Availability next week: 80%.,01-10-2026,08-10-2026,team_status
