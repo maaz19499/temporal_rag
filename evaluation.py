@@ -14,7 +14,7 @@ Metrics evaluated (per Task 3):
 import sys
 import os
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from tabulate import tabulate
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
@@ -84,32 +84,53 @@ def evaluate_retriever_suite(
     }
 
 
-def run_full_evaluation():
+import argparse
+from datetime import date
+
+
+def run_full_evaluation(
+    data_dir: Optional[str] = None,
+    custom_ref_date: Optional[str] = None,
+    custom_queries: Optional[List[str]] = None,
+):
     print("=" * 80)
     print("RELEVANCE-FIRST PMO RAG BENCHMARK & EVALUATION")
     print("=" * 80)
 
-    # 1. Ingestion (Dynamically detects dataset reference date & sprint horizon)
-    ingestor = PMODataIngestion()
+    # 1. Ingestion (Dynamically detects dataset reference date, projects & sprint horizon)
+    ingestor = PMODataIngestion(data_dir=data_dir)
     docs = ingestor.load_corpus(include_tasks=True)
-    inferred_date = ingestor.inferred_ref_date or DEFAULT_CONFIG.default_ref_date
+
+    if custom_ref_date:
+        inferred_date = date.fromisoformat(custom_ref_date)
+    else:
+        inferred_date = ingestor.inferred_ref_date or DEFAULT_CONFIG.default_ref_date
+
     print(f"[Ingestion] Loaded {len(docs)} documents. Active anchor date: {inferred_date}")
+    if ingestor.discovered_projects:
+        print(f"[Ingestion] Discovered projects: {list(set(p[1] for p in ingestor.discovered_projects.values()))}")
 
     # 2. Embedding Indexer
     indexer = EmbeddingIndexer()
     print(f"[Embedding] Initialized {indexer.backend} backend.")
 
-    # 3. Parsers & Retrievers (Anchored dynamically to dataset timeline)
-    parser = TemporalQueryParser(DEFAULT_CONFIG, ref_date=inferred_date)
+    # 3. Parsers & Retrievers (Anchored dynamically to dataset timeline and discovered projects)
+    parser = TemporalQueryParser(
+        DEFAULT_CONFIG,
+        ref_date=inferred_date,
+        sprint_dates=ingestor.sprint_dates,
+        project_mappings=ingestor.discovered_projects,
+    )
     vanilla = VanillaRetriever(docs, indexer)
     relevance_first = RelevanceFirstRetriever(docs, indexer, config=DEFAULT_CONFIG, parser=parser)
 
     # 4. Run Benchmarks
+    eval_queries = custom_queries or BENCHMARK_QUERIES
     print("\n[Running] Evaluating Vanilla RAG (Cosine Similarity)...")
-    vanilla_metrics = evaluate_retriever_suite(vanilla, "Vanilla RAG", BENCHMARK_QUERIES, parser, top_k=3)
+    vanilla_metrics = evaluate_retriever_suite(vanilla, "Vanilla RAG", eval_queries, parser, top_k=3)
 
     print("[Running] Evaluating Relevance-First RAG (Hybrid + Guardrails)...")
-    relevance_metrics = evaluate_retriever_suite(relevance_first, "Relevance-First RAG", BENCHMARK_QUERIES, parser, top_k=3)
+    relevance_metrics = evaluate_retriever_suite(relevance_first, "Relevance-First RAG", eval_queries, parser, top_k=3)
 
     # 5. Print Side-by-Side Failure Diagnosis (Task 1)
     print("\n" + "=" * 80)
@@ -196,4 +217,19 @@ def run_full_evaluation():
 
 
 if __name__ == "__main__":
-    run_full_evaluation()
+    parser = argparse.ArgumentParser(description="Evaluate PMO Relevance-First Temporal RAG on benchmark or holdout datasets.")
+    parser.add_argument("--data-dir", default=None, help="Directory containing holdout corpus and CSVs (defaults to data/)")
+    parser.add_argument("--ref-date", default=None, help="Custom ISO anchor date (YYYY-MM-DD); if omitted, inferred dynamically")
+    parser.add_argument("--queries-file", default=None, help="Path to JSON file containing a list of custom evaluation query strings")
+    args = parser.parse_args()
+
+    custom_queries = None
+    if args.queries_file and os.path.exists(args.queries_file):
+        with open(args.queries_file, "r", encoding="utf-8") as f:
+            custom_queries = json.load(f)
+
+    run_full_evaluation(
+        data_dir=args.data_dir,
+        custom_ref_date=args.ref_date,
+        custom_queries=custom_queries,
+    )

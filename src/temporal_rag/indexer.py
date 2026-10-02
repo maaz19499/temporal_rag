@@ -48,6 +48,8 @@ class PMODataIngestion:
         self.documents: List[Document] = []
         self.inferred_ref_date: Optional[date] = None
         self.max_sprint_number: int = 12
+        self.sprint_dates: Dict[int, Tuple[date, date]] = {}
+        self.discovered_projects: Dict[str, Tuple[str, str]] = {}
 
     def load_corpus(self, include_tasks: bool = True) -> List[Document]:
         docs: List[Document] = []
@@ -56,6 +58,8 @@ class PMODataIngestion:
         if not os.path.exists(corpus_path):
             if os.path.exists("data/rag_corpus.jsonl"):
                 corpus_path = "data/rag_corpus.jsonl"
+            elif os.path.exists("rag_corpus.jsonl"):
+                corpus_path = "rag_corpus.jsonl"
             else:
                 raise CorpusIngestionError(f"Cannot find rag_corpus.jsonl at {corpus_path}")
 
@@ -89,6 +93,28 @@ class PMODataIngestion:
                         }
                     )
                     docs.append(doc)
+
+                    # Dynamic project discovery from corpus
+                    if pid:
+                        self.discovered_projects[pid.lower()] = (pid, pname or pid)
+                    if pname:
+                        for word in re.split(r"[\s\-_]+", pname):
+                            w_clean = word.strip().lower()
+                            if len(w_clean) >= 3 and w_clean not in ["the", "prj", "project", "app", "api"]:
+                                self.discovered_projects[w_clean] = (pid, pname)
+
+                    # Dynamic sprint date discovery from sprint plans
+                    if doc.doc_type == "sprint_plan" and doc.valid_from and doc.valid_to:
+                        m = re.search(r"[-_]s(\d{1,2})\b", doc.doc_id.lower())
+                        if m:
+                            s_num = int(m.group(1))
+                            try:
+                                self.sprint_dates[s_num] = (
+                                    date.fromisoformat(doc.valid_from),
+                                    date.fromisoformat(doc.valid_to),
+                                )
+                            except Exception:
+                                pass
                 except Exception as e:
                     logger.error(f"Error parsing line {line_no} in corpus: {e}")
 
@@ -103,7 +129,18 @@ class PMODataIngestion:
                     raw_tasks.append(row)
                     sprint_str = row.get("sprint", "0")
                     if sprint_str and sprint_str.isdigit():
-                        max_sprint = max(max_sprint, int(sprint_str))
+                        s_num = int(sprint_str)
+                        max_sprint = max(max_sprint, s_num)
+                        v_from_t = normalize_date_str(row.get("valid_from", ""))
+                        v_to_t = normalize_date_str(row.get("valid_to", ""))
+                        if v_from_t and v_to_t and s_num not in self.sprint_dates:
+                            try:
+                                self.sprint_dates[s_num] = (
+                                    date.fromisoformat(v_from_t),
+                                    date.fromisoformat(v_to_t),
+                                )
+                            except Exception:
+                                pass
 
             self.max_sprint_number = max_sprint
             logger.info(f"Dynamically detected maximum sprint in dataset: Sprint {self.max_sprint_number}")
@@ -167,20 +204,35 @@ class PMODataIngestion:
     def _infer_anchor_date(self, docs: List[Document]) -> None:
         """
         Dynamically infers the system anchor date (T_ref) from the holdout dataset.
-        Per README line 42: team_status is valid_from = today.
+        Priority:
+        1. Latest valid_from in team_status (represents 'today' / current week availability).
+        2. Latest valid_to in status_report (represents current active operational cycle).
+        3. Max valid date in corpus.
+        4. Fallback to default_ref_date.
         """
-        team_status_dates = [
-            d.valid_from for d in docs
-            if d.doc_type == "team_status" and d.valid_from
-        ]
+        team_status_dates = []
+        for d in docs:
+            if d.doc_type == "team_status" and d.valid_from:
+                try:
+                    team_status_dates.append(date.fromisoformat(d.valid_from))
+                except Exception:
+                    pass
         if team_status_dates:
-            # Most common valid_from in team_status represents 'today'
-            try:
-                self.inferred_ref_date = date.fromisoformat(team_status_dates[0])
-                logger.info(f"Inferred benchmark reference date from team_status: {self.inferred_ref_date}")
-                return
-            except Exception:
-                pass
+            self.inferred_ref_date = max(team_status_dates)
+            logger.info(f"Inferred benchmark reference date from team_status: {self.inferred_ref_date}")
+            return
+
+        status_report_dates = []
+        for d in docs:
+            if d.doc_type == "status_report" and d.valid_to:
+                try:
+                    status_report_dates.append(date.fromisoformat(d.valid_to))
+                except Exception:
+                    pass
+        if status_report_dates:
+            self.inferred_ref_date = max(status_report_dates)
+            logger.info(f"Inferred benchmark reference date from status_reports: {self.inferred_ref_date}")
+            return
 
         # Fallback to max date in corpus
         valid_dates = []

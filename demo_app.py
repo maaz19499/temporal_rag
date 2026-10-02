@@ -29,7 +29,12 @@ def load_system():
     ingestor = PMODataIngestion()
     docs = ingestor.load_corpus(include_tasks=True)
     indexer = EmbeddingIndexer()
-    parser = TemporalQueryParser(ref_date=datetime.date(2026, 10, 2))
+    inferred_date = ingestor.inferred_ref_date or datetime.date(2026, 10, 2)
+    parser = TemporalQueryParser(
+        ref_date=inferred_date,
+        sprint_dates=getattr(ingestor, "sprint_dates", {}),
+        project_mappings=getattr(ingestor, "discovered_projects", {}),
+    )
     vanilla_retriever = VanillaRetriever(docs, indexer)
     relevance_retriever = RelevanceFirstRetriever(docs, indexer, parser=parser)
     return docs, parser, vanilla_retriever, relevance_retriever
@@ -133,10 +138,20 @@ if st.button("Run Retrieval & Diagnosis", type="primary") or query:
     st.markdown("---")
     st.subheader("📝 Synthesized Executive Answer (with Citations)")
     if guardrail_msg:
-        st.markdown(f"> **Agent Response:** {guardrail_msg}")
+        st.markdown(f"**Agent Response:**\n\n> 🛡️ **Guardrail Intercept:** {guardrail_msg}")
+    elif not any(res.is_temporally_valid for res in r_results):
+        latest_date = r_results[0].valid_to if r_results else "N/A"
+        st.markdown(
+            f"**Agent Response:**\n\n"
+            f"> 🛡️ **Temporal Guardrail Intercept:** No valid {parsed_q.intent} records found for requested horizon "
+            f"**({parsed_q.target_start} to {parsed_q.target_end})**.\n"
+            f"> The latest recorded data in the corpus expired on `{latest_date}`. "
+            f"Per Relevance-First mandate, expired records are withheld to prevent executive misinformation."
+        )
     else:
         st.markdown("**Agent Response:**")
         summary_lines = []
         for i, res in enumerate(r_results):
-            summary_lines.append(f"- {res.text} *[Source: {res.doc_id}, valid {res.valid_from} to {res.valid_to}]*")
+            if res.is_temporally_valid:
+                summary_lines.append(f"- {res.text} *[Source: {res.doc_id}, valid {res.valid_from} to {res.valid_to}]*")
         st.markdown("\n".join(summary_lines))

@@ -4,7 +4,7 @@ Fully dynamic: Calculates calendar week intervals from any reference date.
 """
 
 from datetime import date, timedelta
-from typing import Optional
+from typing import Optional, Dict, Tuple
 import re
 
 from .models import ParsedQuery
@@ -20,17 +20,29 @@ class TemporalQueryParser:
     Converts relative expressions into ISO calendar intervals [start_date, end_date].
     """
 
-    def __init__(self, config: Optional[PMOConfig] = None, ref_date: Optional[date] = None):
+    def __init__(
+        self,
+        config: Optional[PMOConfig] = None,
+        ref_date: Optional[date] = None,
+        sprint_dates: Optional[Dict[int, Tuple[date, date]]] = None,
+        project_mappings: Optional[Dict[str, Tuple[str, str]]] = None,
+    ):
         self.config = config or DEFAULT_CONFIG
         self.ref_date = ref_date or self.config.default_ref_date
+        self.sprint_dates = sprint_dates or {}
+        # Merge config project mappings with any dynamically discovered mappings
+        combined_mappings = dict(self.config.project_mappings)
+        if project_mappings:
+            combined_mappings.update(project_mappings)
+        self.project_mappings = combined_mappings
 
     def parse(self, query: str) -> ParsedQuery:
         q_lower = query.lower().strip()
 
-        # 1. Project Entity Extraction
+        # 1. Project Entity Extraction (Dynamic matching from discovered or configured mappings)
         project_id, project_name = None, None
-        for key, (pid, pname) in self.config.project_mappings.items():
-            if re.search(rf"\b{key}\b", q_lower):
+        for key, (pid, pname) in self.project_mappings.items():
+            if re.search(rf"\b{re.escape(key)}\b", q_lower):
                 project_id = pid
                 project_name = pname
                 break
@@ -83,10 +95,20 @@ class TemporalQueryParser:
             target_end = self.ref_date - timedelta(days=1)
             target_start = target_end - timedelta(days=6)
         elif sprint_number:
-            # Sprints run 7-day cadence
-            base_sprint_start = date(2026, 7, 7)
-            target_start = base_sprint_start + timedelta(weeks=sprint_number - 1)
-            target_end = target_start + timedelta(days=6)
+            if sprint_number in self.sprint_dates:
+                target_start, target_end = self.sprint_dates[sprint_number]
+            elif self.sprint_dates:
+                # Extrapolate relative to the nearest known sprint in the dataset
+                known_sprint = min(self.sprint_dates.keys())
+                known_start, _ = self.sprint_dates[known_sprint]
+                target_start = known_start + timedelta(weeks=sprint_number - known_sprint)
+                target_end = target_start + timedelta(days=6)
+            else:
+                # Fallback: estimate 7-day sprint cycles leading up to reference date
+                weeks_offset = max(0, 12 - sprint_number)
+                target_start = self.ref_date - timedelta(weeks=weeks_offset)
+                target_end = target_start + timedelta(days=6)
+
             if target_start > self.ref_date:
                 is_prospective = True
             elif target_end < self.ref_date:

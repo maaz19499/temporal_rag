@@ -122,6 +122,7 @@ temporal_rag/
 ├── EXERCISE_PROMPT.md      # Original assignment instructions
 ├── docs/
 │   └── approach_tradeoffs_analysis.md # In-depth architectural trade-offs & defense guide
+├── rag_corpus.jsonl        # Unified time-tagged PMO corpus (included for direct evaluation)
 ├── temporal_parser.py      # Deterministic temporal & intent query parser
 ├── ingestion.py            # Bi-temporal tagging, supersession, & embedding indexer
 ├── retriever.py            # Vanilla & Relevance-First hybrid retrievers
@@ -129,7 +130,7 @@ temporal_rag/
 ├── demo_app.py             # Streamlit interactive UI (Task 4)
 ├── cli_demo.py             # Terminal interactive CLI demo
 ├── data/
-│   ├── rag_corpus.jsonl    # 95 unified time-tagged documents
+│   ├── rag_corpus.jsonl    # Unified time-tagged documents
 │   ├── sprint_plan.csv     # 36 sprint plans
 │   ├── status_reports.csv  # 36 status reports
 │   ├── tasks.csv           # 139 granular tasks with status & assignees
@@ -144,6 +145,10 @@ temporal_rag/
 
 ## 5. Quickstart & How to Run
 
+### Dataset & Submission Details (`rag_corpus.jsonl`)
+- **Corpus Included:** `rag_corpus.jsonl` is provided directly in the repository at both `./rag_corpus.jsonl` (repo root) and `./data/rag_corpus.jsonl`.
+- **Holdout Set Evaluation:** Evaluators can run `python evaluation.py` directly on this corpus, or replace `rag_corpus.jsonl` / point `PMO_DATA_DIR` to a holdout set with different dates. The engine dynamically infers the timeline anchor date ($T_{\text{ref}}$) and maximum sprint number without requiring any hardcoded date modifications.
+
 ### Setup Environment
 ```bash
 # 1. Clone repository
@@ -155,7 +160,7 @@ python -m venv .venv
 source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
 
 # 3. Install dependencies
-pip install sentence-transformers torch scikit-learn pandas numpy tabulate streamlit
+pip install -r requirements.txt
 ```
 
 ### Run Benchmarks (Task 1 & Task 3)
