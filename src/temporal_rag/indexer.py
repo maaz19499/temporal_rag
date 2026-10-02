@@ -273,6 +273,18 @@ class EmbeddingIndexer:
         self._init_backend()
 
     def _init_backend(self):
+        # Auto-detect memory-constrained environments like Render Free Tier (512MB limit)
+        if (
+            os.getenv("RENDER") == "true"
+            or os.getenv("PMO_LIGHTWEIGHT", "0") == "1"
+            or os.getenv("PMO_EMBEDDING_BACKEND") == "tfidf"
+        ):
+            logger.info("Initializing lightweight TF-IDF embedding backend (< 100MB RAM for Render Free tier).")
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            self.tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
+            self.backend = "tfidf"
+            return
+
         try:
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(self.model_name)

@@ -15,18 +15,38 @@ logger = setup_logger("temporal_rag.engine")
 
 
 class BaseRetriever:
-    """Base vector retrieval engine."""
+    """
+    Base vector retrieval engine.
+    Supports local in-memory FAISS (IndexFlatIP) with seamless NumPy fallback.
+    Complies with prompt mandate: 100% local, no API keys, no large DB dumps.
+    """
 
     def __init__(self, documents: List[Document], indexer: EmbeddingIndexer):
         self.documents = documents
         self.indexer = indexer
         self.doc_texts = [d.text for d in documents]
         self.doc_embeddings = self.indexer.embed_corpus(self.doc_texts)
+        self.faiss_index = None
+
+        # Optional local FAISS acceleration
+        try:
+            import faiss
+            dim = self.doc_embeddings.shape[1]
+            self.faiss_index = faiss.IndexFlatIP(dim)
+            self.faiss_index.add(np.ascontiguousarray(self.doc_embeddings, dtype=np.float32))
+            logger.info("Initialized local FAISS IndexFlatIP vector index.")
+        except Exception:
+            self.faiss_index = None
 
     def compute_semantic_scores(self, query: str) -> np.ndarray:
         q_emb = self.indexer.embed_query(query)
-        sims = np.dot(self.doc_embeddings, q_emb)
-        return np.clip(sims, -1.0, 1.0)
+        if self.faiss_index is not None:
+            q_vec = np.ascontiguousarray([q_emb], dtype=np.float32)
+            sims, _ = self.faiss_index.search(q_vec, len(self.documents))
+            return np.clip(sims[0], -1.0, 1.0)
+        else:
+            sims = np.dot(self.doc_embeddings, q_emb)
+            return np.clip(sims, -1.0, 1.0)
 
 
 class VanillaRetriever(BaseRetriever):

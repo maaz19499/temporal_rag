@@ -53,6 +53,7 @@ with st.sidebar:
     ref_date = st.date_input("System Reference Date ($T_{ref}$)", datetime.date(2026, 10, 2))
     parser.ref_date = ref_date
     top_k = st.slider("Top-K Retrieved Documents", min_value=1, max_value=5, value=3)
+    st.caption(f"🧠 Vector Backend: `{vanilla_retriever.indexer.backend}`")
 
     st.markdown("---")
     st.subheader("Task 4 Quick Intents")
