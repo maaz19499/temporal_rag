@@ -31,7 +31,7 @@ The system distinguishes between three temporal operational modes:
 
 ### 3. The Relevance Guardrail: "Relevance over Accuracy"
 
-When a user asks for future plans (*"What is the plan for next week for Atlas?"*), and no document in the corpus satisfies $\text{valid\_to} \ge Q_{\text{start}}$, standard RAG suffers from a **hallucination trap**: the LLM synthesizes an expired plan (e.g., Sprint 11).
+When a user asks for future plans (*"What is the plan for next week for Atlas?"*), and no document in the corpus satisfies `valid_to >= Q_start`, standard RAG suffers from a **hallucination trap**: the LLM synthesizes an expired plan (e.g., Sprint 11).
 
 **Our Guardrail Mechanism:**
 - The pipeline executes a **deterministic candidate gate** prior to LLM generation.

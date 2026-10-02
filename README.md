@@ -107,7 +107,7 @@ Run `python evaluation.py` to reproduce the benchmark results across the 5 stand
 | **Hallucination Rate (%)** | **0.0%** | **0.0%** | **0.0% (Eliminated)** |
 
 ### Metric Definitions
-- **Temporal Hit Rate:** Percentage of retrieved documents where $\text{overlap}(\text{doc.valid\_range}, \text{query\_range}) > 0$.
+- **Temporal Hit Rate:** Percentage of retrieved documents where `overlap(doc.valid_range, query_range) > 0`.
 - **Relevance Precision@3:** Fraction of top-3 retrieved documents that are simultaneously semantically relevant and temporally valid.
 - **Hallucination Rate:** Percentage of queries where an expired/superseded plan was returned for a future horizon query.
 
